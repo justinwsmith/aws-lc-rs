@@ -151,6 +151,10 @@ fn prepare_cmake_build(manifest_dir: &PathBuf, build_prefix: Option<&str>) -> cm
     cmake_cfg.define("DISABLE_PERL", "ON");
     cmake_cfg.define("DISABLE_GO", "ON");
 
+    cmake_cfg.define("CMAKE_SYSTEM_NAME", "iOS");
+    cmake_cfg.define("CMAKE_OSX_ARCHITECTURES", "arm64");
+    cmake_cfg.define("CMAKE_OSX_SYSROOT", "iphonesimulator");
+
     if cfg!(feature = "asan") {
         env::set_var("CC", "/usr/bin/clang");
         env::set_var("CXX", "/usr/bin/clang++");
