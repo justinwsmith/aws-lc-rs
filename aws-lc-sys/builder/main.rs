@@ -167,6 +167,11 @@ fn prepare_cmake_build(manifest_dir: &PathBuf, build_prefix: Option<&str>) -> cm
         );
     }
 
+    cmake_cfg.define(
+        "CMAKE_TOOLCHAIN_FILE",
+        "/Users/justin/repos/aws-lc-rs/docker/linux-cross/pp64le-toolchain.cmake",
+    );
+
     // Build flags that minimize our crate size.
     cmake_cfg.define("BUILD_TESTING", "OFF");
     if cfg!(feature = "ssl") {
