@@ -348,6 +348,40 @@ jobs:
         working-directory: ./aws-lc-rs
         run: cargo test ${{ matrix.args }}
 
+  windows-fips-test:
+    name: aws-lc-rs windows-fips-tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [ stable ]
+        os: [ windows-2019 ]
+        args:
+          - --all-targets --features fips
+          - --all-targets --features fips,bindgen
+          - --release --all-targets --features fips
+          - --no-default-features --features fips
+          - --no-default-features --features fips,ring-io
+          - --no-default-features --features fips,ring-sig-verify
+          - --no-default-features --features fips,alloc
+    steps:
+      - uses: ilammy/setup-nasm@v1
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+      - uses: actions-rs/toolchain@v1.0.7
+        id: toolchain
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Install ninja-build tool
+        uses: seanmiddleditch/gha-setup-ninja@v4
+      - name: Run cargo test
+        working-directory: ./aws-lc-rs
+        # Doc-tests fail to link with dynamic build
+        # See: https://github.com/rust-lang/cargo/issues/8531
+        run: cargo test --tests ${{ matrix.args }}
+
   publish-dry-run:
     name: publish dry-run
     runs-on: ${{ matrix.os }}
@@ -644,4 +678,3 @@ jobs:
       - name: Build with minimal versions
         working-directory: ./aws-lc-rs
         run: cargo --locked check
-

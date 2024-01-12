@@ -116,11 +116,25 @@ fn target_platform_prefix(name: &str) -> String {
     format!("{}_{}_{}", env::consts::OS, env::consts::ARCH, name)
 }
 
-fn test_command(executable: &OsStr, args: &[&OsStr]) -> bool {
-    if let Ok(output) = Command::new(executable).args(args).output() {
-        return output.status.success();
+pub(crate) struct TestCommandResult {
+    output: Box<str>,
+    status: bool,
+}
+
+fn test_command(executable: &OsStr, args: &[&OsStr]) -> TestCommandResult {
+    if let Ok(result) = Command::new(executable).args(args).output() {
+        let output = String::from_utf8(result.stdout)
+            .unwrap_or_default()
+            .into_boxed_str();
+        return TestCommandResult {
+            output,
+            status: result.status.success(),
+        };
     }
-    false
+    TestCommandResult {
+        output: String::new().into_boxed_str(),
+        status: false,
+    }
 }
 
 #[cfg(any(
