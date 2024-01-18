@@ -4,9 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use std::env;
-use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 use cmake_builder::CmakeBuilder;
 
@@ -57,8 +55,7 @@ enum OutputLibType {
 
 impl Default for OutputLibType {
     fn default() -> Self {
-        let build_type_result = env::var("AWS_LC_SYS_STATIC");
-        if let Ok(build_type) = build_type_result {
+        if let Ok(build_type) = env::var("AWS_LC_SYS_STATIC") {
             eprintln!("AWS_LC_SYS_STATIC={build_type}");
             // If the environment variable is set, we ignore every other factor.
             let build_type = build_type.to_lowercase();
@@ -107,13 +104,6 @@ fn prefix_string() -> String {
 #[cfg(feature = "bindgen")]
 fn target_platform_prefix(name: &str) -> String {
     format!("{}_{}_{}", env::consts::OS, env::consts::ARCH, name)
-}
-
-fn test_command(executable: &OsStr, args: &[&OsStr]) -> bool {
-    if let Ok(output) = Command::new(executable).args(args).output() {
-        return output.status.success();
-    }
-    false
 }
 
 #[cfg(any(

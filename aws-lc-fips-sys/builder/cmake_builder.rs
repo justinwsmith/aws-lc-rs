@@ -94,18 +94,20 @@ impl CmakeBuilder {
             // The Windows/FIPS build rejects "debug" profile
             // https://github.com/aws/aws-lc/blob/main/CMakeLists.txt#L656
             cmake_cfg.define("CMAKE_BUILD_TYPE", "relwithdebinfo");
+        } else {
+            cmake_cfg.define("CMAKE_BUILD_TYPE", "debug");
+        }
+
+        if target_os() == "windows" {
             cmake_cfg.generator("Ninja");
             let env_map = self
                 .collect_vcvarsall_bat()
                 .map_err(|x| panic!("{}", x))
                 .unwrap();
-            println!("Setting environment!");
             for (key, value) in env_map {
                 println!("ENV-{}={}", key.as_str(), value.as_str());
                 cmake_cfg.env(key, value);
             }
-        } else {
-            cmake_cfg.define("CMAKE_BUILD_TYPE", "debug");
         }
 
         if let Some(prefix) = &self.build_prefix {

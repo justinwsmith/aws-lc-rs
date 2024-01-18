@@ -57,8 +57,7 @@ enum OutputLibType {
 
 impl Default for OutputLibType {
     fn default() -> Self {
-        let build_type_result = env::var("AWS_LC_FIPS_SYS_STATIC");
-        if let Ok(build_type) = build_type_result {
+        if let Ok(build_type) = env::var("AWS_LC_FIPS_SYS_STATIC") {
             eprintln!("AWS_LC_FIPS_SYS_STATIC={build_type}");
             // If the environment variable is set, we ignore every other factor.
             let build_type = build_type.to_lowercase();
@@ -228,9 +227,8 @@ trait Builder {
 }
 
 fn main() {
-    let output_lib_type = OutputLibType::default();
-
     let mut is_bindgen_required = cfg!(feature = "bindgen");
+    let output_lib_type = OutputLibType::default();
 
     let is_internal_generate = env::var("AWS_LC_RUST_INTERNAL_BINDGEN")
         .unwrap_or_else(|_| String::from("0"))
@@ -291,7 +289,6 @@ fn main() {
         bindings_available,
         "aws-lc-fip-sys build failed. Please enable the 'bindgen' feature on aws-lc-rs or aws-lc-fips-sys"
     );
-
     builder.build().unwrap();
 
     println!(

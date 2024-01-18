@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
-use crate::{target, target_arch, target_os, target_vendor, test_command, OutputLibType};
+use crate::{target, target_arch, target_os, target_vendor, OutputLibType};
 use std::env;
-use std::ffi::OsStr;
 use std::path::PathBuf;
+use which::which;
 
 pub(crate) struct CmakeBuilder {
     manifest_dir: PathBuf,
@@ -14,14 +14,11 @@ pub(crate) struct CmakeBuilder {
     output_lib_type: OutputLibType,
 }
 
-fn find_cmake_command() -> Option<&'static OsStr> {
-    if test_command("cmake3".as_ref(), &["--version".as_ref()]) {
-        Some("cmake3".as_ref())
-    } else if test_command("cmake".as_ref(), &["--version".as_ref()]) {
-        Some("cmake".as_ref())
-    } else {
-        None
+fn find_cmake_command() -> Option<PathBuf> {
+    if let Ok(path) = which("cmake").or_else(|_| which("cmake3")) {
+        return Some(path);
     }
+    None
 }
 
 fn get_platform_output_path() -> PathBuf {
@@ -120,6 +117,7 @@ impl CmakeBuilder {
 
             cmake_cfg.define("ASAN", "1");
         }
+        cmake_cfg.define("CMAKE_INSTALL_PREFIX", self.artifact_output_dir());
 
         cmake_cfg
     }
@@ -127,6 +125,7 @@ impl CmakeBuilder {
     fn build_rust_wrapper(&self) -> PathBuf {
         self.prepare_cmake_build()
             .configure_arg("--no-warn-unused-cli")
+            .build_target("install")
             .build()
     }
 }
