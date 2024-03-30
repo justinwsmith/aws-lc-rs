@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
-use crate::{target, target_arch, target_os, target_vendor, test_command, OutputLibType};
+use crate::{
+    env_var_to_bool, target, target_arch, target_os, target_vendor, test_command, OutputLibType,
+};
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -100,6 +102,10 @@ impl CmakeBuilder {
         // Build flags that minimize our dependencies.
         cmake_cfg.define("DISABLE_PERL", "ON");
         cmake_cfg.define("DISABLE_GO", "ON");
+
+        if Some(true) == env_var_to_bool("AWS_LC_SYS_NO_ASM") {
+            cmake_cfg.define("OPENSSL_NO_ASM", "1");
+        }
 
         if target_vendor() == "apple" {
             if target_os().trim() == "ios" {

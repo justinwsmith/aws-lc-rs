@@ -2,7 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
-use crate::{target, target_arch, target_os, target_vendor, test_command, OutputLibType};
+use crate::{
+    cargo_env, env_var_to_bool, target, target_arch, target_os, target_vendor, test_command,
+    OutputLibType,
+};
 use std::collections::HashMap;
 use std::env;
 use std::ffi::OsStr;
@@ -88,7 +91,11 @@ impl CmakeBuilder {
             cmake_cfg.define("BUILD_SHARED_LIBS", "0");
         }
 
-        let opt_level = env::var("OPT_LEVEL").unwrap_or_else(|_| "0".to_string());
+        if Some(true) == env_var_to_bool("AWS_LC_FIPS_SYS_NO_ASM") {
+            cmake_cfg.define("OPENSSL_NO_ASM", "1");
+        }
+
+        let opt_level = cargo_env("OPT_LEVEL");
         if opt_level.ne("0") {
             if opt_level.eq("1") || opt_level.eq("2") {
                 cmake_cfg.define("CMAKE_BUILD_TYPE", "relwithdebinfo");
