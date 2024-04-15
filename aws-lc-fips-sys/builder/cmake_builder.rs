@@ -142,6 +142,9 @@ impl CmakeBuilder {
                 cmake_cfg.define("CMAKE_OSX_ARCHITECTURES", "arm64");
             }
         }
+        if target_os() == "windows" && target_env() == "gnu" {
+            cmake_cfg.generator("Ninja");
+        }
         cmake_cfg.define("FIPS", "1");
 
         if cfg!(feature = "asan") {

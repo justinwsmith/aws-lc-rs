@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
-use crate::{target, target_arch, target_os, target_vendor, test_command, OutputLibType};
+use crate::{
+    target, target_arch, target_env, target_os, target_vendor, test_command, OutputLibType,
+};
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -120,6 +122,9 @@ impl CmakeBuilder {
                 cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "x86_64");
             }
         }
+        if target_os() == "windows" && target_env() == "gnu" {
+            cmake_cfg.generator("Ninja");
+        }
 
         if cfg!(feature = "asan") {
             env::set_var("CC", "clang");
@@ -149,6 +154,14 @@ impl crate::Builder for CmakeBuilder {
             eprintln!("Missing dependency: cmake");
             missing_dependency = true;
         };
+
+        if target_os() == "windows"
+            && target_env() == "gnu"
+            && !test_command("ninja".as_ref(), &["--version".as_ref()]).status
+        {
+            eprintln!("Missing dependency: ninja");
+            missing_dependency = true;
+        }
 
         if missing_dependency {
             return Err("Required build dependency is missing. Halting build.".to_owned());
