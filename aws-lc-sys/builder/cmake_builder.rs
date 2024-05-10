@@ -2,10 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
-use crate::{
-    cargo_env, execute_command, is_no_asm, target, target_arch, target_env, target_os,
-    target_vendor, OutputLibType,
-};
+use crate::{cargo_env, execute_command, is_no_asm, is_prebuilt_nasm, target, target_arch, target_env, target_os, target_vendor, OutputLibType, emit_warning};
 use std::env;
 use std::ffi::OsStr;
 use std::path::PathBuf;
@@ -138,6 +135,22 @@ impl CmakeBuilder {
             // Use Ninja if available
             cmake_cfg.generator("Ninja");
         }
+        if target_os() == "windows" && target_arch() == "x86_64" && is_prebuilt_nasm() {
+            emit_warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            emit_warning("!!!   Using pre-built NASM binaries   !!!");
+            emit_warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+            let script_path = self
+                .manifest_dir
+                .join("builder")
+                .join("prebuilt-nasm.bat")
+                .display()
+                .to_string();
+            let script_path = script_path.replace(r"\", "/");
+
+            cmake_cfg.define("CMAKE_ASM_NASM_COMPILER", script_path.as_str());
+            cmake_cfg.define("CMAKE_VERBOSE_MAKEFILE", "1");
+        }
 
         if cfg!(feature = "asan") {
             env::set_var("CC", "clang");
@@ -165,6 +178,7 @@ impl crate::Builder for CmakeBuilder {
             && target_arch() == "x86_64"
             && !test_nasm_command()
             && !is_no_asm()
+            && !is_prebuilt_nasm()
         {
             eprintln!(
                 "Consider setting `AWS_LC_SYS_NO_ASM` in the environment for development builds.\
