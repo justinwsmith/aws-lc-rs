@@ -138,11 +138,28 @@ jobs:
       - name: cargo xwin build for `aarch64-pc-windows-msvc`
         run: cargo xwin build -p aws-lc-rs --release --target aarch64-pc-windows-msvc
 
-  aws-lc-rs-windows-mingw:
+  aws-lc-rs-windows-cross:
     if: github.repository_owner == 'aws'
-    name: x86_64-pc-windows-gnu
+    name: ${{ matrix.target }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - 'x86_64-pc-windows-gnu'
+          - 'i686-pc-windows-msvc'
+          # TODO: The build for 'i686-pc-windows-gnu' succeeds locally.
+          # GH CI erroring with `undefined reference` to several assembly functions.
+          # Verify NASM setup and symbol prefixing are working as expected.
+          # - 'i686-pc-windows-gnu'
     steps:
+      - if: ${{ matrix.target == 'i686-pc-windows-gnu' }}
+        name: Set up MinGW
+        shell: bash
+        run: |
+          choco install mingw --x86
+          echo "C:/ProgramData/mingw64/mingw32/bin/" >> "$GITHUB_PATH"
+          echo "export COMPILER_PATH=C:/ProgramData/mingw64/mingw32/bin/" >> "$GITHUB_ENV"
       - uses: ilammy/setup-nasm@v1
       - uses: actions/checkout@v3
         with:
@@ -151,11 +168,13 @@ jobs:
         id: toolchain
         with:
           toolchain: stable
-          target: x86_64-pc-windows-gnu
-      - name: Debug Test on `x86_64-pc-windows-gnu`
-        run: cargo test -p aws-lc-rs --target x86_64-pc-windows-gnu --features bindgen
-      - name: Release test on `x86_64-pc-windows-gnu`
-        run: cargo test -p aws-lc-rs --release --target x86_64-pc-windows-gnu --features bindgen
+          target: ${{ matrix.target }}
+      - name: Debug Test on `${{ matrix.target }}`
+        shell: bash
+        run: cargo test -p aws-lc-rs --target ${{ matrix.target }} --features bindgen
+      - name: Release test on `${{ matrix.target }}`
+        shell: bash
+        run: cargo test -p aws-lc-rs --release --target ${{ matrix.target }} --features bindgen
 
   aws-lc-rs-windows-arm64:
     if: github.repository_owner == 'aws'
@@ -172,5 +191,9 @@ jobs:
         with:
           toolchain: stable
           target: aarch64-pc-windows-msvc
-      - name: Build for `aarch64-pc-windows-msvc`
+      - name: Degbug build for `aarch64-pc-windows-msvc`
         run: cargo build -p aws-lc-rs --target aarch64-pc-windows-msvc --features bindgen
+      - name: No-default-features Debug Build for `aarch64-pc-windows-msvc`
+        run: cargo build -p aws-lc-rs --target aarch64-pc-windows-msvc --no-default-features --features aws-lc-sys
+      - name: Release Build for `aarch64-pc-windows-msvc`
+        run: cargo build --release -p aws-lc-rs --target aarch64-pc-windows-msvc

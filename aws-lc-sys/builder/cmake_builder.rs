@@ -134,6 +134,16 @@ impl CmakeBuilder {
             return cmake_cfg;
         }
 
+        if test_ninja_command() {
+            // Use Ninja if available
+            cmake_cfg.generator("Ninja");
+        }
+
+        if target_os() == "windows" && target_arch() == "x86" && target_env() == "msvc" {
+            cmake_cfg.define("CMAKE_SYSTEM_NAME", "");
+            cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "");
+        }
+
         if target_vendor() == "apple" {
             if target_os().to_lowercase() == "ios" {
                 cmake_cfg.define("CMAKE_SYSTEM_NAME", "iOS");
@@ -152,11 +162,6 @@ impl CmakeBuilder {
                 cmake_cfg.define("CMAKE_OSX_ARCHITECTURES", "x86_64");
                 cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "x86_64");
             }
-        }
-
-        if (target_env() != "msvc") && test_ninja_command() {
-            // Use Ninja if available
-            cmake_cfg.generator("Ninja");
         }
 
         if target_underscored() == "aarch64_pc_windows_msvc" {
