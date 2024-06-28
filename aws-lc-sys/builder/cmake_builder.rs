@@ -67,9 +67,13 @@ impl CmakeBuilder {
     }
 
     fn get_cmake_config(&self) -> cmake::Config {
-        cmake::Config::new(&self.manifest_dir)
+        let mut cmake_cfg = cmake::Config::new(&self.manifest_dir);
+        // See issue: https://github.com/aws/aws-lc-rs/issues/453
+        cmake_cfg.static_crt(true);
+        cmake_cfg
     }
 
+    #[allow(clippy::too_many_lines)]
     fn prepare_cmake_build(&self) -> cmake::Config {
         let mut cmake_cfg = self.get_cmake_config();
 
