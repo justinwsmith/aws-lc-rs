@@ -134,9 +134,9 @@ jobs:
       - name: Install cargo-xwin and bindgen-cli
         run: cargo install cargo-xwin bindgen-cli
       - name: cargo xwin build for `x86_64-pc-windows-msvc`
-        run: cargo xwin build -p aws-lc-rs --release --target x86_64-pc-windows-msvc
+        run: cargo xwin build -p aws-lc-rs --release --all-targets --target x86_64-pc-windows-msvc
       - name: cargo xwin build for `aarch64-pc-windows-msvc`
-        run: cargo xwin build -p aws-lc-rs --release --target aarch64-pc-windows-msvc
+        run: cargo xwin build -p aws-lc-rs --release --all-targets --target aarch64-pc-windows-msvc
 
   aws-lc-rs-windows-cross:
     if: github.repository_owner == 'aws'
@@ -192,8 +192,8 @@ jobs:
           toolchain: stable
           target: aarch64-pc-windows-msvc
       - name: Degbug build for `aarch64-pc-windows-msvc`
-        run: cargo build -p aws-lc-rs --target aarch64-pc-windows-msvc --features bindgen
+        run: cargo build -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc --features bindgen
       - name: No-default-features Debug Build for `aarch64-pc-windows-msvc`
-        run: cargo build -p aws-lc-rs --target aarch64-pc-windows-msvc --no-default-features --features aws-lc-sys
+        run: cargo build -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc --no-default-features --features aws-lc-sys
       - name: Release Build for `aarch64-pc-windows-msvc`
-        run: cargo build --release -p aws-lc-rs --target aarch64-pc-windows-msvc
+        run: cargo build --release -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc
