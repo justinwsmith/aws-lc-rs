@@ -138,7 +138,7 @@ jobs:
       - name: cargo xwin build for `aarch64-pc-windows-msvc`
         run: cargo xwin build -p aws-lc-rs --release --all-targets --target aarch64-pc-windows-msvc
 
-  aws-lc-rs-windows-cross:
+  aws-lc-rs-windows-gnu:
     if: github.repository_owner == 'aws'
     name: ${{ matrix.target }}
     runs-on: windows-latest
@@ -147,19 +147,8 @@ jobs:
       matrix:
         target:
           - 'x86_64-pc-windows-gnu'
-          - 'i686-pc-windows-msvc'
-          # TODO: The build for 'i686-pc-windows-gnu' succeeds locally.
-          # GH CI erroring with `undefined reference` to several assembly functions.
-          # Verify NASM setup and symbol prefixing are working as expected.
-          # - 'i686-pc-windows-gnu'
+          # TODO: 'i686-pc-windows-gnu'
     steps:
-      - if: ${{ matrix.target == 'i686-pc-windows-gnu' }}
-        name: Set up MinGW
-        shell: bash
-        run: |
-          choco install mingw --x86
-          echo "C:/ProgramData/mingw64/mingw32/bin/" >> "$GITHUB_PATH"
-          echo "export COMPILER_PATH=C:/ProgramData/mingw64/mingw32/bin/" >> "$GITHUB_ENV"
       - uses: ilammy/setup-nasm@v1
       - uses: actions/checkout@v3
         with:
@@ -170,18 +159,28 @@ jobs:
           toolchain: stable
           target: ${{ matrix.target }}
       - name: Debug Test on `${{ matrix.target }}`
-        shell: bash
         run: cargo test -p aws-lc-rs --target ${{ matrix.target }} --features bindgen
       - name: Release test on `${{ matrix.target }}`
-        shell: bash
         run: cargo test -p aws-lc-rs --release --target ${{ matrix.target }} --features bindgen
 
-  aws-lc-rs-windows-arm64:
+  aws-lc-rs-windows-msvc:
     if: github.repository_owner == 'aws'
-    name: aarch64-pc-windows-msvc
+    name: ${{ matrix.target }}
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - 'x86_64-pc-windows-msvc'
+          - 'i686-pc-windows-msvc'
+          - 'aarch64-pc-windows-msvc'
+    env:
+      RUSTFLAGS: '-Clink-arg=/WX'
     steps:
-      - uses: actions/checkout@v3
+      - name: Install NASM
+        if: ${{ matrix.target == 'x86_64-pc-windows-msvc' || matrix.target == 'i686-pc-windows-msvc' }}
+        uses: ilammy/setup-nasm@v1
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
       - name: Install ninja-build tool
@@ -190,10 +189,17 @@ jobs:
         id: toolchain
         with:
           toolchain: stable
-          target: aarch64-pc-windows-msvc
-      - name: Degbug build for `aarch64-pc-windows-msvc`
-        run: cargo build -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc --features bindgen
-      - name: No-default-features Debug Build for `aarch64-pc-windows-msvc`
-        run: cargo build -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc --no-default-features --features aws-lc-sys
-      - name: Release Build for `aarch64-pc-windows-msvc`
-        run: cargo build --release -p aws-lc-rs --all-targets --target aarch64-pc-windows-msvc
+          target: ${{ matrix.target }}
+      - name: Set ACTION_CARGO
+        run: |
+          if ('${{ matrix.target }}' -like '*aarch64*') {
+            echo "ACTION_CARGO=build" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            echo "ACTION_CARGO=test" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+      - name: Degbug build for ${{ matrix.target }}
+        run: cargo ${{ env.ACTION_CARGO }} -p aws-lc-rs --all-targets --target ${{ matrix.target }} --features bindgen
+      - name: No-default-features Debug Build for ${{ matrix.target }}
+        run: cargo ${{ env.ACTION_CARGO }} -p aws-lc-rs --all-targets --target ${{ matrix.target }} --no-default-features --features aws-lc-sys
+      - name: Release Build for ${{ matrix.target }}
+        run: cargo ${{ env.ACTION_CARGO }} --release -p aws-lc-rs --all-targets --target ${{ matrix.target }}

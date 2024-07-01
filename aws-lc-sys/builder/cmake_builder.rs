@@ -68,15 +68,16 @@ impl CmakeBuilder {
 
     fn get_cmake_config(&self) -> cmake::Config {
         let mut cmake_cfg = cmake::Config::new(&self.manifest_dir);
-        // See issue: https://github.com/aws/aws-lc-rs/issues/453
-        cmake_cfg.static_crt(true);
+        if cargo_env("CARGO_ENCODED_RUSTFLAGS").contains("-Ctarget-feature=+crt-static") {
+            // See issue: https://github.com/aws/aws-lc-rs/issues/453
+            cmake_cfg.static_crt(true);
+        }
         cmake_cfg
     }
 
     #[allow(clippy::too_many_lines)]
     fn prepare_cmake_build(&self) -> cmake::Config {
         let mut cmake_cfg = self.get_cmake_config();
-
         if OutputLibType::default() == OutputLibType::Dynamic {
             cmake_cfg.define("BUILD_SHARED_LIBS", "1");
         } else {
@@ -91,6 +92,7 @@ impl CmakeBuilder {
                 cmake_cfg.define("CMAKE_BUILD_TYPE", "release");
             }
         } else if target_os() == "windows" {
+            // See issue: https://github.com/aws/aws-lc-rs/issues/453
             cmake_cfg.define("CMAKE_BUILD_TYPE", "relwithdebinfo");
         } else {
             cmake_cfg.define("CMAKE_BUILD_TYPE", "debug");
