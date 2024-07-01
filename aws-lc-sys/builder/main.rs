@@ -369,6 +369,11 @@ fn is_no_asm() -> bool {
     unsafe { AWS_LC_SYS_NO_ASM }
 }
 
+fn is_crt_static() -> bool {
+    let features = cargo_env("CARGO_CFG_TARGET_FEATURE");
+    features.contains("crt-static")
+}
+
 fn has_bindgen_feature() -> bool {
     cfg!(feature = "bindgen")
 }

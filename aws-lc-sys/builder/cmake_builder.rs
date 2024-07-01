@@ -3,8 +3,8 @@
 
 use crate::OutputLib::{Crypto, RustWrapper, Ssl};
 use crate::{
-    cargo_env, emit_warning, execute_command, is_no_asm, option_env, target, target_arch,
-    target_env, target_os, target_underscored, target_vendor, OutputLibType,
+    cargo_env, emit_warning, execute_command, is_crt_static, is_no_asm, option_env, target,
+    target_arch, target_env, target_os, target_underscored, target_vendor, OutputLibType,
 };
 use std::env;
 use std::ffi::OsStr;
@@ -67,12 +67,7 @@ impl CmakeBuilder {
     }
 
     fn get_cmake_config(&self) -> cmake::Config {
-        let mut cmake_cfg = cmake::Config::new(&self.manifest_dir);
-        if cargo_env("CARGO_ENCODED_RUSTFLAGS").contains("-Ctarget-feature=+crt-static") {
-            // See issue: https://github.com/aws/aws-lc-rs/issues/453
-            cmake_cfg.static_crt(true);
-        }
-        cmake_cfg
+        cmake::Config::new(&self.manifest_dir)
     }
 
     #[allow(clippy::too_many_lines)]
@@ -91,9 +86,6 @@ impl CmakeBuilder {
             } else {
                 cmake_cfg.define("CMAKE_BUILD_TYPE", "release");
             }
-        } else if target_os() == "windows" {
-            // See issue: https://github.com/aws/aws-lc-rs/issues/453
-            cmake_cfg.define("CMAKE_BUILD_TYPE", "relwithdebinfo");
         } else {
             cmake_cfg.define("CMAKE_BUILD_TYPE", "debug");
         }
@@ -142,14 +134,17 @@ impl CmakeBuilder {
             return cmake_cfg;
         }
 
-        if test_ninja_command() {
-            // Use Ninja if available
-            cmake_cfg.generator("Ninja");
-        }
-
-        if target_os() == "windows" && target_arch() == "x86" && target_env() == "msvc" {
-            cmake_cfg.define("CMAKE_SYSTEM_NAME", "");
-            cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "");
+        if target_os() == "windows" {
+            // See issue: https://github.com/aws/aws-lc-rs/issues/453
+            if is_crt_static() {
+                cmake_cfg.static_crt(true);
+            } else {
+                cmake_cfg.static_crt(false);
+            }
+            if target_arch() == "x86" && target_env() == "msvc" {
+                cmake_cfg.define("CMAKE_SYSTEM_NAME", "");
+                cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "");
+            }
         }
 
         if target_vendor() == "apple" {
@@ -173,7 +168,7 @@ impl CmakeBuilder {
         }
 
         if target_underscored() == "aarch64_pc_windows_msvc" {
-            cmake_cfg.generator("Ninja");
+            //cmake_cfg.generator("Ninja");
             cmake_cfg.define("CMAKE_C_COMPILER", "clang-cl");
             cmake_cfg.define("CMAKE_CXX_COMPILER", "clang-cl");
             cmake_cfg.define("CMAKE_ASM_COMPILER", "clang-cl");
@@ -181,9 +176,15 @@ impl CmakeBuilder {
             #[cfg(not(target_arch = "aarch64"))]
             {
                 // Only needed when cross-compiling
-                cmake_cfg.define("CMAKE_C_COMPILER_TARGET", "arm64-pc-windows-msvc");
-                cmake_cfg.define("CMAKE_CXX_COMPILER_TARGET", "arm64-pc-windows-msvc");
-                cmake_cfg.define("CMAKE_ASM_COMPILER_TARGET", "arm64-pc-windows-msvc");
+                cmake_cfg.define("CMAKE_SYSTEM_PROCESSOR", "ARM64");
+                cmake_cfg.define("CMAKE_C_FLAGS_INIT", "--target=arm64-pc-windows-msvc");
+                cmake_cfg.define("CMAKE_CXX_FLAGS_INIT", "--target=arm64-pc-windows-msvc");
+                cmake_cfg.define("CMAKE_ASM_FLAGS_INIT", "--target=arm64-pc-windows-msvc");
+
+                cmake_cfg.define("CMAKE_FIND_ROOT_PATH_MODE_PROGRAM", "NEVER");
+                cmake_cfg.define("CMAKE_FIND_ROOT_PATH_MODE_LIBRARY", "ONLY");
+                cmake_cfg.define("CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", "ONLY");
+                cmake_cfg.define("CMAKE_FIND_ROOT_PATH_MODE_INCLUDE", "ONLY");
             }
         }
 

@@ -140,7 +140,7 @@ jobs:
 
   aws-lc-rs-windows-gnu:
     if: github.repository_owner == 'aws'
-    name: ${{ matrix.target }}
+    name: ${{ matrix.target }} ${{ (matrix.ninja == '1' && 'w/ Ninja') || 'w/o Ninja'}}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -148,11 +148,17 @@ jobs:
         target:
           - 'x86_64-pc-windows-gnu'
           # TODO: 'i686-pc-windows-gnu'
+        ninja:
+          - '0'
+          - '1'
     steps:
       - uses: ilammy/setup-nasm@v1
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
+      - name: Install ninja-build tool
+        if: ${{ matrix.ninja == '1' }}
+        uses: seanmiddleditch/gha-setup-ninja@v4
       - uses: dtolnay/rust-toolchain@master
         id: toolchain
         with:
@@ -164,8 +170,8 @@ jobs:
         run: cargo test -p aws-lc-rs --release --target ${{ matrix.target }} --features bindgen
 
   aws-lc-rs-windows-msvc:
-    if: github.repository_owner == 'aws'
-    name: ${{ matrix.target }}
+    if: ${{ github.repository_owner == 'aws' }}
+    name: ${{ matrix.target }} ${{ (matrix.ninja == '1' && 'w/ Ninja') || 'w/o Ninja'}} - ${{ (matrix.crt_static == '1' && '/WX and crt-static') || '/WX' }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -174,8 +180,12 @@ jobs:
           - 'x86_64-pc-windows-msvc'
           - 'i686-pc-windows-msvc'
           - 'aarch64-pc-windows-msvc'
-    env:
-      RUSTFLAGS: '-Clink-arg=/WX'
+        ninja:
+          - '0'
+          - '1'
+        crt_static:
+          - '0'
+          - '1'
     steps:
       - name: Install NASM
         if: ${{ matrix.target == 'x86_64-pc-windows-msvc' || matrix.target == 'i686-pc-windows-msvc' }}
@@ -184,6 +194,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Install ninja-build tool
+        if: ${{ matrix.ninja == '1' }}
         uses: seanmiddleditch/gha-setup-ninja@v4
       - uses: dtolnay/rust-toolchain@master
         id: toolchain
@@ -197,9 +208,16 @@ jobs:
           } else {
             echo "ACTION_CARGO=test" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
-      - name: Degbug build for ${{ matrix.target }}
+      - name: Set RUSTFLAGS
+        run: |
+          if ('${{ matrix.crt_static }}' -eq '1') {
+            echo "RUSTFLAGS=-Clink-arg=/WX -Ctarget-feature=+crt-static" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            echo "RUSTFLAGS=-Clink-arg=/WX" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+      - name: Debug build
+        if: ${{ matrix.target != 'aarch64-pc-windows-msvc' || matrix.ninja == '1' }}
         run: cargo ${{ env.ACTION_CARGO }} -p aws-lc-rs --all-targets --target ${{ matrix.target }} --features bindgen
-      - name: No-default-features Debug Build for ${{ matrix.target }}
-        run: cargo ${{ env.ACTION_CARGO }} -p aws-lc-rs --all-targets --target ${{ matrix.target }} --no-default-features --features aws-lc-sys
       - name: Release Build for ${{ matrix.target }}
+        if: ${{ matrix.target != 'aarch64-pc-windows-msvc' || matrix.ninja == '1' }}
         run: cargo ${{ env.ACTION_CARGO }} --release -p aws-lc-rs --all-targets --target ${{ matrix.target }}
