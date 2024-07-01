@@ -90,6 +90,8 @@ impl CmakeBuilder {
             } else {
                 cmake_cfg.define("CMAKE_BUILD_TYPE", "release");
             }
+        } else if target_os() == "windows" {
+            cmake_cfg.define("CMAKE_BUILD_TYPE", "relwithdebinfo");
         } else {
             cmake_cfg.define("CMAKE_BUILD_TYPE", "debug");
         }
