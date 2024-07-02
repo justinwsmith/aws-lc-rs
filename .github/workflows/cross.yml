@@ -140,7 +140,7 @@ jobs:
 
   aws-lc-rs-windows-gnu:
     if: github.repository_owner == 'aws'
-    name: ${{ matrix.target }} ${{ (matrix.ninja == '1' && 'w/ Ninja') || 'w/o Ninja'}}
+    name: ${{ matrix.target }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -148,17 +148,11 @@ jobs:
         target:
           - 'x86_64-pc-windows-gnu'
           # TODO: 'i686-pc-windows-gnu'
-        ninja:
-          - '0'
-          - '1'
     steps:
       - uses: ilammy/setup-nasm@v1
       - uses: actions/checkout@v4
         with:
           submodules: 'recursive'
-      - name: Install ninja-build tool
-        if: ${{ matrix.ninja == '1' }}
-        uses: seanmiddleditch/gha-setup-ninja@v4
       - uses: dtolnay/rust-toolchain@master
         id: toolchain
         with:
@@ -171,7 +165,7 @@ jobs:
 
   aws-lc-rs-windows-msvc:
     if: ${{ github.repository_owner == 'aws' }}
-    name: ${{ matrix.target }} ${{ (matrix.ninja == '1' && 'w/ Ninja') || 'w/o Ninja'}} - ${{ (matrix.crt_static == '1' && '/WX and crt-static') || '/WX' }}
+    name: ${{ matrix.target }} - ${{ (matrix.crt_static == '1' && 'crt-static and /WX') || '/WX' }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
@@ -180,9 +174,6 @@ jobs:
           - 'x86_64-pc-windows-msvc'
           - 'i686-pc-windows-msvc'
           - 'aarch64-pc-windows-msvc'
-        ninja:
-          - '0'
-          - '1'
         crt_static:
           - '0'
           - '1'
@@ -194,7 +185,7 @@ jobs:
         with:
           submodules: 'recursive'
       - name: Install ninja-build tool
-        if: ${{ matrix.ninja == '1' }}
+        if: ${{ matrix.target == 'aarch64-pc-windows-msvc' }}
         uses: seanmiddleditch/gha-setup-ninja@v4
       - uses: dtolnay/rust-toolchain@master
         id: toolchain
@@ -216,8 +207,6 @@ jobs:
             echo "RUSTFLAGS=-Clink-arg=/WX" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
       - name: Debug build
-        if: ${{ matrix.target != 'aarch64-pc-windows-msvc' || matrix.ninja == '1' }}
         run: cargo ${{ env.ACTION_CARGO }} -p aws-lc-rs --all-targets --target ${{ matrix.target }} --features bindgen
       - name: Release Build for ${{ matrix.target }}
-        if: ${{ matrix.target != 'aarch64-pc-windows-msvc' || matrix.ninja == '1' }}
         run: cargo ${{ env.ACTION_CARGO }} --release -p aws-lc-rs --all-targets --target ${{ matrix.target }}
