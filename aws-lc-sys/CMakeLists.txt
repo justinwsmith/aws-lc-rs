@@ -7,7 +7,12 @@ project(AWS_LC_RUST NONE)
 enable_language(C)
 
 function(set_my_target_properties ...)
-    set_target_properties(rust_wrapper crypto PROPERTIES ${ARGV})
+    # ¯\_(ツ)_/¯
+    if(WIN32 AND NOT BUILD_SHARED_LIBS)
+        set_target_properties(rust_wrapper crypto PROPERTIES ${ARGV} SUFFIX .lib)
+    else()
+        set_target_properties(rust_wrapper crypto PROPERTIES ${ARGV})
+    endif()
     if (BUILD_LIBSSL)
         set_target_properties(ssl PROPERTIES ${ARGV})
     endif()
