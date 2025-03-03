@@ -1,7 +1,9 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0 OR ISC
 
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5...3.31)
+
+cmake_policy(SET CMP0091 OLD)
 
 project(AWS_LC_RUST NONE)
 enable_language(C)
